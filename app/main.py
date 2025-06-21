@@ -10,7 +10,7 @@ import time
 from sqlalchemy import false
 from sqlalchemy.orm import Session
 
-from app import models
+from app import models,schemas
 
 
 from app.database import engine, get_db
@@ -22,10 +22,7 @@ app = FastAPI()
 # uvicorn app.main:app  --reload  , when i am in C:\Users\Pradeep\Documents\fastapi>
 
 
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True
+
 while True:
     try:
         conn = psycopg2.connect(host ='localhost',database='fastapi', user='postgres',password='9841102621',cursor_factory=RealDictCursor)
@@ -49,7 +46,7 @@ def get_pots(db:Session=Depends(get_db)):
 
 
 @app.post("/posts/", status_code= status.HTTP_201_CREATED)
-def create_posts(post:Post,db:Session=Depends(get_db)):
+def create_posts(post:schemas.PostCreate,db:Session=Depends(get_db)):
     #new_post = models.Post(title=post.title,content=post.content,published=post.published)
 
     new_post = models.Post(**post.dict())
@@ -94,7 +91,7 @@ def delete_post(id:int,db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, updated_post : Post,db: Session = Depends(get_db)):
+def update_post(id: int, updated_post:schemas.PostCreate,db: Session = Depends(get_db)):
     #cursor.execute("""UPDATE posts SET title = %s , content = %s, published = %s where id = %s returning *""",(post.title,post.content,post.published, id))
     #update_post = cursor.fetchone()
     #conn.commit()
@@ -107,10 +104,3 @@ def update_post(id: int, updated_post : Post,db: Session = Depends(get_db)):
     post_query.update(updated_post.dict(),synchronize_session=False)
     db.commit()
     return {'data':post_query.first()}
-
-
-@app.get("/sqlalchemy")
-def test_posts(db:Session=Depends(get_db)):
-
-    posts = db.query(models.Post).all()
-    return {'data':posts}
