@@ -1,13 +1,9 @@
 
-from turtle import title
-from unittest import mock
+from typing import Optional, List
 from fastapi import Depends, FastAPI, Response, status, HTTPException
-from httpx import post
-from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor 
 import time
-from sqlalchemy import false
 from sqlalchemy.orm import Session
 
 from app import models,schemas
@@ -36,25 +32,24 @@ while True:
 
 
 
-@app.get("/posts/")
+@app.get("/posts/",response_model=List[schemas.Post])
 def get_pots(db:Session=Depends(get_db)):
     #cursor.execute("""SELECT * FROM posts """)
     #my_posts = cursor.fetchall()
     #return {"data": my_posts}
     posts = db.query(models.Post).all()
-    return {'data':posts}
+    return posts
 
 
-@app.post("/posts/", status_code= status.HTTP_201_CREATED)
+@app.post("/posts/", status_code= status.HTTP_201_CREATED,response_model=schemas.Post)
 def create_posts(post:schemas.PostCreate,db:Session=Depends(get_db)):
     #new_post = models.Post(title=post.title,content=post.content,published=post.published)
-
     new_post = models.Post(**post.dict())
 
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {'data':new_post}
+    return new_post
 
 
     #cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING *""",(post.title, post.content, post.published))
@@ -62,7 +57,7 @@ def create_posts(post:schemas.PostCreate,db:Session=Depends(get_db)):
     #conn.commit()
     #return {'data':new_post}
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}",response_model=schemas.Post)
 def get_post(id: int,db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id==id).first()
 
@@ -72,7 +67,7 @@ def get_post(id: int,db: Session = Depends(get_db)):
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail=f'post with id: {id} not found')
-    return {"post_detail": post}
+    return post
 
 
 @app.delete("/posts/{id}", status_code= status.HTTP_204_NO_CONTENT)
@@ -90,7 +85,7 @@ def delete_post(id:int,db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT) 
 
 
-@app.put("/posts/{id}")
+@app.put("/posts/{id}",response_model=schemas.Post)
 def update_post(id: int, updated_post:schemas.PostCreate,db: Session = Depends(get_db)):
     #cursor.execute("""UPDATE posts SET title = %s , content = %s, published = %s where id = %s returning *""",(post.title,post.content,post.published, id))
     #update_post = cursor.fetchone()
@@ -103,4 +98,4 @@ def update_post(id: int, updated_post:schemas.PostCreate,db: Session = Depends(g
 
     post_query.update(updated_post.dict(),synchronize_session=False)
     db.commit()
-    return {'data':post_query.first()}
+    return post_query.first()
