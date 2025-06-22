@@ -1,15 +1,18 @@
 
 from typing import Optional, List
+from warnings import deprecated
 from fastapi import Depends, FastAPI, Response, status, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor 
 import time
 from sqlalchemy.orm import Session
 
-from app import models,schemas
+
+from app import models,schemas,utls
 
 
 from app.database import engine, get_db
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -103,8 +106,10 @@ def update_post(id: int, updated_post:schemas.PostCreate,db: Session = Depends(g
 
 @app.post("/users", status_code= status.HTTP_201_CREATED,response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    
+    #hash the password - user.password
+    user.password = utls.hash(user.password)
     new_user = models.User(**user.dict())
-
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
